@@ -1,4 +1,4 @@
-# probeguard
+# ProbeGuard
 [ProbeGuard: Mitigating Probing Attacks Through Reactive Program Transformations [ASPLOS'19]](https://www.vusec.net/download/?t=papers/probeguard_asplos19.pdf)
 
 Many modern defenses against code reuse rely on hiding sensitive data such as shadow stacks in a huge memory address space. While much more efficient than traditional integritybased defenses, these solutions are vulnerable to probing attacks which quickly locate the hidden data and compromise security. This has led researchers to question the value of information hiding in real-world software security. Instead, we argue that such a limitation is _not_ fundamental and that information hiding and integrity-based defenses are two extremes of a continuous spectrum of solutions.
