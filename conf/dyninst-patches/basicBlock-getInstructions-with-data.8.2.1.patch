@@ -1,0 +1,28 @@
+--- Dyninst-8.2.1.orig/dyninstAPI/h/BPatch_basicBlock.h	2015-09-03 20:59:07.232383840 +0200
++++ Dyninst-8.2.1/dyninstAPI/h/BPatch_basicBlock.h	2015-09-03 21:05:12.749065230 +0200
+@@ -294,6 +294,7 @@
+   /** return the instructions that belong to the block */
+ 
+   bool  getInstructions(std::vector<Dyninst::InstructionAPI::Instruction::Ptr>& insns);
++  bool  getInstructions(std::vector<Dyninst::InstructionAPI::Instruction::Ptr>& insns, const void *data);
+   bool  getInstructions(std::vector<std::pair<Dyninst::InstructionAPI::Instruction::Ptr, Dyninst::Address> >& insnInstances);
+ 
+ 
+--- Dyninst-8.2.1.orig/dyninstAPI/src/BPatch_basicBlock.C	2015-09-03 20:59:07.234383887 +0200
++++ Dyninst-8.2.1/dyninstAPI/src/BPatch_basicBlock.C	2015-09-03 21:05:12.749065230 +0200
+@@ -602,10 +602,13 @@
+  */
+ 
+ bool BPatch_basicBlock::getInstructions(std::vector<InstructionAPI::Instruction::Ptr>& insns) {
++  return getInstructions(insns, iblock->proc()->getPtrToInstruction(getStartAddress()));
++}
++
++bool BPatch_basicBlock::getInstructions(std::vector<InstructionAPI::Instruction::Ptr>& insns, const void *data) {
+   using namespace InstructionAPI;
+ 
+-  InstructionDecoder d((const unsigned char*)
+-                       (iblock->proc()->getPtrToInstruction(getStartAddress())),
++  InstructionDecoder d((const unsigned char*) data,
+                        size(),
+                        iblock->llb()->obj()->cs()->getArch());
+   do {

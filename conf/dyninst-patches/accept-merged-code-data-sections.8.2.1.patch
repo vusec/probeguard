@@ -1,0 +1,12 @@
+--- Dyninst-8.2.1.orig/symtabAPI/src/Object-elf.C	2015-09-03 20:59:07.285385092 +0200
++++ Dyninst-8.2.1/symtabAPI/src/Object-elf.C	2015-09-03 21:02:50.479663864 +0200
+@@ -3272,7 +3272,8 @@
+ 	code_len_ = (unsigned)phdr.p_filesz();
+       }
+ 
+-    } else if (((phdr.p_vaddr() <= dataddr) && 
++    }
++    if (((phdr.p_vaddr() <= dataddr) && 
+ 		(phdr.p_vaddr() + phdr.p_filesz() >= dataddr)) || 
+ 	       (!dataddr && (phdr.p_type() == PT_LOAD))) {
+       if (data_ptr_ == 0 && data_off_ == 0 && data_len_ == 0) {

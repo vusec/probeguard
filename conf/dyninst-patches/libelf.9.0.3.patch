@@ -1,0 +1,12 @@
+diff -Naur DyninstAPI-9.0.3.orig/elf/src/Elf_X.C DyninstAPI-9.0.3/elf/src/Elf_X.C
+--- DyninstAPI-9.0.3.orig/elf/src/Elf_X.C	2015-08-26 18:13:07.000000000 +0200
++++ DyninstAPI-9.0.3/elf/src/Elf_X.C	2016-06-25 14:59:21.303883671 +0200
+@@ -62,7 +62,7 @@
+ #define APPEND2(X) APPEND(X)
+ #define LIBELF_TEST APPEND2(_LIBELF_H)
+ #if (LIBELF_TEST == 11)
+-#define USES_ELFUTILS
++//#define USES_ELFUTILS
+ #endif
+ 
+ Elf_X *Elf_X::newElf_X(int input, Elf_Cmd cmd, Elf_X *ref, string name)

@@ -9,4 +9,4 @@ We will present [this paper](https://www.vusec.net/download/?t=papers/probeguard
 
 ### Source code
 
-We will publish the source code here, during the conference in April 2019.
+We are publishing the source code here, during the conference in April 2019.

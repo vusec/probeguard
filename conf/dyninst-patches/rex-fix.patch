@@ -1,0 +1,12 @@
+--- instructionAPI/src/InstructionDecoder-x86.C.backup	2015-06-19 12:08:47.952735203 +0200
++++ instructionAPI/src/InstructionDecoder-x86.C	2015-06-19 12:08:53.688735050 +0200
+@@ -1076,6 +1076,9 @@
+                     {
+                         MachRegister r(optype);
+                         r = MachRegister((r.val() & ~r.getArchitecture()) | m_Arch);
++                        if (locs->rex_position != -1 && (r == x86_64::ah || r == x86_64::bh || r == x86_64::ch || r == x86_64::dh)) {
++                            r = MachRegister( (r.val() & (~0xff00)) | x86_64::L_REG | 0x4);
++                        }
+                         entryID entryid = decodedInstruction->getEntry()->getID(locs);
+                         if(locs->rex_b && insn_to_complete->m_Operands.empty() && 
+ 			    (entryid == e_push || entryid == e_pop || entryid == e_xchg || ((*(b.start + locs->opcode_position) & 0xf0) == 0xb0) ) )

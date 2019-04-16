@@ -1,0 +1,182 @@
+diff -Naur Dyninst-8.2.1.orig/common/h/entryIDs.h Dyninst-8.2.1/common/h/entryIDs.h
+--- Dyninst-8.2.1.orig/common/h/entryIDs.h	2014-10-30 16:49:43.000000000 +0100
++++ Dyninst-8.2.1/common/h/entryIDs.h	2015-09-15 10:08:19.479331900 +0200
+@@ -258,6 +258,9 @@
+   e_int80,
+   e_into,
+   e_invd,
++  e_invept,
++  e_invpcid,
++  e_invvpid,
+   e_invlpg,
+   e_iret,
+   e_lahf,
+@@ -560,6 +563,8 @@
+   e_unpcklps,
+   e_verr,
+   e_verw,
++  e_vmptrld,
++  e_vmptrst,
+   e_vmread,
+   e_vmwrite,
+   e_vsyscall,
+@@ -572,6 +577,9 @@
+   e_xor,
+   e_xorpd,
+   e_xorps,
++  e_xrstor,
++  e_xsave,
++  e_xsaveopt,
+   e_fp_generic,
+   e_3dnow_generic,
+ 
+diff -Naur Dyninst-8.2.1.orig/common/src/arch-x86.C Dyninst-8.2.1/common/src/arch-x86.C
+--- Dyninst-8.2.1.orig/common/src/arch-x86.C	2014-10-30 16:49:43.000000000 +0100
++++ Dyninst-8.2.1/common/src/arch-x86.C	2015-09-15 12:22:35.002345300 +0200
+@@ -104,6 +104,7 @@
+ 	SSEB30, SSEB31, SSEB32, SSEB33, SSEB34, SSEB35, SSEB37,
+ 	SSEB38, SSEB39,	SSEB3A, SSEB3B, SSEB3C, SSEB3D, SSEB3E, SSEB3F,
+ 	SSEB40, SSEB41,
++	SSEB80, SSEB81, SSEB82,
+ 	SSEBF0, SSEBF1
+ };
+ 
+@@ -471,6 +472,9 @@
+   (e_int80, "int 80")
+   (e_into, "into")
+   (e_invd, "invd")
++  (e_invept, "invept")
++  (e_invpcid, "invpcid")
++  (e_invvpid, "invvpid")
+   (e_invlpg, "invlpg")
+   (e_iret, "iret")
+   (e_jb, "jb")
+@@ -801,6 +805,8 @@
+   (e_unpcklps, "unpcklps")
+   (e_verr, "verr")
+   (e_verw, "verw")
++  (e_vmptrld, "vmptrld")
++  (e_vmptrst, "vmptrst")
+   (e_wait, "wait")
+   (e_wbinvd, "wbinvd")
+   (e_wrmsr, "wrmsr")
+@@ -810,6 +816,9 @@
+   (e_xor, "xor")
+   (e_xorpd, "xorpd")
+   (e_xorps, "xorps")
++  (e_xrstor, "xrstor")
++  (e_xsave, "xsave")
++  (e_xsaveopt, "xsaveopt")
+   (e_fp_generic, "[FIXME: GENERIC FPU INSN]")
+   (e_3dnow_generic, "[FIXME: GENERIC 3DNow INSN]")
+         ;
+@@ -1748,9 +1757,9 @@
+ 		{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+ 		{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+ 		/* 80 */
+-		{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+-		{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+-		{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++		{ e_No_Entry, t_sse_bis, SSEB80, true, { Zz, Zz, Zz }, 0, 0 },
++		{ e_No_Entry, t_sse_bis, SSEB81, true, { Zz, Zz, Zz }, 0, 0 },
++		{ e_No_Entry, t_sse_bis, SSEB82, true, { Zz, Zz, Zz }, 0, 0 },
+ 		{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+ 		{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+ 		{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+@@ -2508,8 +2517,8 @@
+   { e_No_Entry, t_ill, 0, true, { Zz, Zz, Zz }, 0, 0 },
+   { e_No_Entry, t_ill, 0, true, { Zz, Zz, Zz }, 0, 0 },
+   { e_No_Entry, t_ill, 0, true, { Zz, Zz, Zz }, 0, 0 },
+-  { e_No_Entry, t_ill, 0, true, { Zz, Zz, Zz }, 0, 0 },
+-  { e_No_Entry, t_ill, 0, true, { Zz, Zz, Zz }, 0, 0 }
++  { e_vmptrld, t_done, 0, true, { Zz, Zz, Zz }, 0, 0 }, /* also vmclear, vmxon and rdrand depending on prefix/mod */
++  { e_vmptrst, t_done, 0, true, { Zz, Zz, Zz }, 0, 0 } /* also rdseed depending on mod */
+  },
+ 
+  /* group 10 is all illegal */
+@@ -2604,9 +2613,9 @@
+       { e_fxrstor, t_done, 0, true, { M512, Zz, Zz }, 0, s1R | (fFXRSTOR << FPOS) },
+       { e_ldmxcsr, t_done, 0, true, { Md, Zz, Zz }, 0, s1R },
+       { e_stmxcsr, t_done, 0, true, { Md, Zz, Zz }, 0, s1W },
+-      { e_No_Entry, t_ill, 0, true, { Zz, Zz, Zz }, 0, 0 },
+-      { e_No_Entry, t_ill, 0, true, { Zz, Zz, Zz }, 0, 0 },
+-      { e_No_Entry, t_ill, 0, true, { Zz, Zz, Zz }, 0, 0 },
++      { e_xsave,  t_done, 0, true, { M512, Zz, Zz }, 0, s1W | (fFXSAVE << FPOS) }, /* arguments incorrect, just for decoding */
++      { e_xrstor, t_done, 0, true, { M512, Zz, Zz }, 0, s1R | (fFXRSTOR << FPOS) }, /* arguments incorrect, just for decoding */
++      { e_xsaveopt,  t_done, 0, true, { M512, Zz, Zz }, 0, s1W | (fFXSAVE << FPOS) }, /* arguments incorrect, just for decoding */
+       { e_clflush, t_done, 0, true, { Mb, Zz, Zz }, 0, s1W | (fCLFLUSH << FPOS) },
+     },
+     {
+@@ -3684,6 +3693,27 @@
+ 				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+ 				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 }
+ 		},
++		{ /* SSEB80 */
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_invept, t_done, 0, true, { Vdq, Wdq, Zz }, 0, s1W2R }, /* just for decoding, operands not correctly specified */
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 }
++		},
++		{ /* SSEB81 */
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_invvpid, t_done, 0, true, { Vdq, Wdq, Zz }, 0, s1W2R }, /* just for decoding, operands not correctly specified */
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 }
++		},
++		{ /* SSEB82 */
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_invpcid, t_done, 0, true, { Vdq, Wdq, Zz }, 0, s1W2R }, /* just for decoding, operands not correctly specified */
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
++				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 }
++		},
+ 		{ /* SSEBF0 */
+ 				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+ 				{ e_No_Entry, t_ill, 0, false, { Zz, Zz, Zz }, 0, 0 },
+@@ -5095,7 +5125,7 @@
+   /* 5x */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+   /* 6x */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+   /* 7x */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+-  /* 8x */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
++  /* 8x */ 1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+   /* 9x */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+   /* Ax */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+   /* Bx */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+diff -Naur Dyninst-8.2.1.orig/dataflowAPI/src/convertOpcodes.C Dyninst-8.2.1/dataflowAPI/src/convertOpcodes.C
+--- Dyninst-8.2.1.orig/dataflowAPI/src/convertOpcodes.C	2014-10-30 16:49:43.000000000 +0100
++++ Dyninst-8.2.1/dataflowAPI/src/convertOpcodes.C	2015-09-15 10:08:43.622276900 +0200
+@@ -457,6 +457,10 @@
+             return x86_into;
+         case e_invd:
+             return x86_invd;
++        case e_invept:
++            return x86_invept;
++        case e_invvpid:
++            return x86_invvpid;
+         case e_invlpg:
+             return x86_invlpg;
+         case e_iret:
+@@ -939,6 +943,10 @@
+             return x86_verr;
+         case e_verw:
+             return x86_verw;
++        case e_vmptrld:
++            return x86_vmptrld;
++        case e_vmptrst:
++            return x86_vmptrst;
+         case e_vmread:
+             return x86_vmread;
+         case e_vmwrite:
+@@ -961,6 +969,10 @@
+             return x86_xorpd;
+         case e_xorps:
+             return x86_xorps;
++        case e_xrstor:
++            return x86_xrstor;
++        case e_xsave:
++            return x86_xsave;
+         case e_fp_generic:
+             return x86_unknown_instruction;
+         case e_3dnow_generic:
